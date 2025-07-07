@@ -4,6 +4,8 @@ from portfolio import portfolio_bp
 
 import requests
 import numpy as np
+import pandas as pd
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "your-very-secret-key"
@@ -17,13 +19,11 @@ def index():
     return render_template("index.html")
 
 @app.route("/api/analyze", methods=["GET"])
-@app.route("/api/analyze", methods=["GET"])
 def analyze():
     symbol = request.args.get("symbol")
     if not symbol:
         return jsonify({"error": "No symbol provided"}), 400
 
-    # Example using Polygon.io
     api_key = "YOUR_API_KEY"
     url = f"https://api.polygon.io/v2/aggs/ticker/{symbol.upper()}/range/1/day/2023-01-01/2023-12-31?adjusted=true&sort=asc&limit=120&apiKey={api_key}"
 
@@ -48,7 +48,6 @@ def analyze():
         rs = up / down if down != 0 else 0
         rsi = np.zeros_like(prices)
         rsi[:period] = 100. - 100. / (1. + rs)
-
         for i in range(period, len(prices)):
             delta = deltas[i - 1]
             if delta > 0:
@@ -67,7 +66,7 @@ def analyze():
     rsi_value = rsi_series[-1]
     moving_avg = closes_array[-20:].mean()
 
-    # Simple MACD example
+    # MACD Calculation
     def calculate_macd(prices, slow=26, fast=12, signal=9):
         exp1 = pd.Series(prices).ewm(span=fast, adjust=False).mean()
         exp2 = pd.Series(prices).ewm(span=slow, adjust=False).mean()
@@ -94,15 +93,6 @@ def analyze():
         "rsi_series": rsi_series,
         "macd_line": macd_line,
         "signal_line": signal_line
-    })
-
-
-    return jsonify({
-        "symbol": symbol.upper(),
-        "latest_price": closes_array[0],
-        "rsi": round(rsi_value, 2),
-        "moving_average_20": round(moving_avg, 2),
-        "recommendation": recommendation
     })
 
 if __name__ == "__main__":
