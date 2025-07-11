@@ -4,6 +4,7 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 import requests
 import numpy as np
+from flask import request
 from datetime import datetime, timedelta
 
 app = Flask(__name__)
@@ -135,6 +136,34 @@ def login():
             return redirect(url_for("index"))
         flash("Invalid username or password.")
     return render_template("login.html")
+
+
+@app.route("/add_holding", methods=["POST"])
+@login_required
+def add_holding():
+    symbol = request.form["symbol"]
+    quantity = int(request.form["quantity"])
+    buy_price = float(request.form["buy_price"])
+
+    new_holding = Portfolio(
+        user_id=current_user.id,
+        stock_symbol=symbol,
+        quantity=quantity,
+        buy_price=buy_price
+    )
+    db.session.add(new_holding)
+    db.session.commit()
+    return redirect(url_for("portfolio"))
+
+@app.route("/delete_holding/<int:holding_id>", methods=["POST"])
+@login_required
+def delete_holding(holding_id):
+    holding = Portfolio.query.get_or_404(holding_id)
+    if holding.user_id != current_user.id:
+        return "Unauthorized", 403
+    db.session.delete(holding)
+    db.session.commit()
+    return redirect(url_for("portfolio"))
 
 # -------------------------------
 # Logout Route
