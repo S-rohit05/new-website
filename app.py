@@ -138,7 +138,38 @@ def login():
 
 # -------------------------------
 # Logout Route
-# -------------------------------
+#-------------------------------
+@app.route("/portfolio")
+@login_required
+def portfolio():
+    holdings = Portfolio.query.filter_by(user_id=current_user.id).all()
+
+    # Build a list of holdings with current market prices
+    portfolio_data = []
+    for h in holdings:
+        # Fetch latest price
+        url = f"https://api.polygon.io/v2/aggs/ticker/{h.stock_symbol.upper()}/prev"
+        params = {"apiKey": API_KEY}
+        resp = requests.get(url, params=params).json()
+        if "results" in resp and resp["results"]:
+            latest_price = resp["results"][0]["c"]
+            profit_loss = (latest_price - float(h.buy_price)) * h.quantity
+        else:
+            latest_price = None
+            profit_loss = None
+
+        portfolio_data.append({
+            "id": h.id,
+            "symbol": h.stock_symbol.upper(),
+            "quantity": h.quantity,
+            "buy_price": float(h.buy_price),
+            "latest_price": latest_price,
+            "profit_loss": profit_loss,
+            "date_added": h.date_added.strftime("%Y-%m-%d")
+        })
+
+    return render_template("portfolio.html", portfolio=portfolio_data)
+
 @app.route("/logout")
 @login_required
 def logout():
